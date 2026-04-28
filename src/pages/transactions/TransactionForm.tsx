@@ -43,6 +43,11 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
     api<Category[]>('/categories').then(setCategories).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    const d = parseInt(date.split('-')[2])
+    setRecurringDay(String(d > 28 ? 28 : d))
+  }, [date])
+
   const filteredCategories = categories.filter(c =>
     type === 'income' ? c.type === 'income' : c.type === 'expense'
   )
