@@ -26,7 +26,8 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
   const [totalInstallments, setTotalInstallments] = useState('2')
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurringDay, setRecurringDay] = useState(() => {
-    const d = parseInt(new Date().toISOString().split('T')[0].split('-')[2])
+    const dateStr = transaction?.transaction_date ?? new Date().toISOString().split('T')[0]
+    const d = parseInt(dateStr.split('-')[2])
     return String(d > 28 ? 28 : d)
   })
   const [recurringIndefinite, setRecurringIndefinite] = useState(true)
@@ -87,6 +88,11 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
           is_installment: isInstallment,
           total_installments: isInstallment ? parseInt(totalInstallments) : 1,
           notes,
+          ...(isEdit && isRecurring ? {
+            make_recurring: true,
+            day_of_month: parseInt(recurringDay) || 1,
+            months: recurringIndefinite ? null : parseInt(recurringMonths) || null,
+          } : {}),
         }
         if (isEdit) {
           await api<Transaction>(`/transactions/${transaction.id}`, { method: 'PUT', body })
@@ -203,46 +209,47 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
       )}
 
       {/* checkboxes */}
-      {!isEdit && (
-        <div className="flex flex-col gap-2">
-          {(type === 'income' || type === 'expense') && (
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isRecurring}
-                onChange={e => { setIsRecurring(e.target.checked); setIsInstallment(false); setIsFixed(false) }}
-                className="w-4 h-4 accent-[hsl(142,71%,45%)]"
-              />
-              <span className="text-[hsl(215,20%,55%)] text-sm">Recorrente (gera todo mês automaticamente)</span>
-            </label>
-          )}
-          {type === 'expense' && !isRecurring && (
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isFixed}
-                onChange={e => setIsFixed(e.target.checked)}
-                className="w-4 h-4 accent-[hsl(142,71%,45%)]"
-              />
-              <span className="text-[hsl(215,20%,55%)] text-sm">Gasto fixo</span>
-            </label>
-          )}
-          {type === 'expense' && !isRecurring && (
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isInstallment}
-                onChange={e => { setIsInstallment(e.target.checked); setIsFixed(false) }}
-                className="w-4 h-4 accent-[hsl(142,71%,45%)]"
-              />
-              <span className="text-[hsl(215,20%,55%)] text-sm">Parcelado</span>
-            </label>
-          )}
-        </div>
-      )}
+      <div className="flex flex-col gap-2">
+        {(type === 'income' || type === 'expense') && !transaction?.recurring_id && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isRecurring}
+              onChange={e => { setIsRecurring(e.target.checked); setIsInstallment(false); setIsFixed(false) }}
+              className="w-4 h-4 accent-[hsl(142,71%,45%)]"
+            />
+            <span className="text-[hsl(215,20%,55%)] text-sm">Recorrente (gera todo mês automaticamente)</span>
+          </label>
+        )}
+        {transaction?.recurring_id && (
+          <p className="text-xs text-[hsl(142,71%,45%)]">Transação recorrente — gerada automaticamente</p>
+        )}
+        {type === 'expense' && !isRecurring && !isEdit && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isFixed}
+              onChange={e => setIsFixed(e.target.checked)}
+              className="w-4 h-4 accent-[hsl(142,71%,45%)]"
+            />
+            <span className="text-[hsl(215,20%,55%)] text-sm">Gasto fixo</span>
+          </label>
+        )}
+        {type === 'expense' && !isRecurring && !isEdit && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isInstallment}
+              onChange={e => { setIsInstallment(e.target.checked); setIsFixed(false) }}
+              className="w-4 h-4 accent-[hsl(142,71%,45%)]"
+            />
+            <span className="text-[hsl(215,20%,55%)] text-sm">Parcelado</span>
+          </label>
+        )}
+      </div>
 
       {/* opções de recorrência */}
-      {!isEdit && isRecurring && (
+      {isRecurring && (
         <div className="flex flex-col gap-3 bg-[hsl(222,20%,8%)] border border-[hsl(142,71%,45%)]/20 rounded-lg p-3">
           <div className="flex flex-col gap-1">
             <label className="text-[hsl(215,20%,55%)] text-xs font-medium">Dia do mês (1–28)</label>

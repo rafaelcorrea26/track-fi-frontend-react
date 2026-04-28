@@ -31,6 +31,7 @@ export type Transaction = {
   category_name?: string
   category_icon?: string
   notes?: string
+  recurring_id?: number
   created_at: string
 }
 
