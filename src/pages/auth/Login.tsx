@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, ApiError } from '@/services/api'
+
+const STORAGE_KEY = 'trackfi_remembered'
 
 type Props = {
   onLogin: (token: string) => void
@@ -9,8 +11,20 @@ type Props = {
 export default function Login({ onLogin, onGoRegister }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(atob(saved)) as { email: string; password: string }
+      setEmail(parsed.email)
+      setPassword(parsed.password)
+      setRemember(true)
+    } catch {}
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,6 +35,11 @@ export default function Login({ onLogin, onGoRegister }: Props) {
         method: 'POST',
         body: { email, password },
       })
+      if (remember) {
+        localStorage.setItem(STORAGE_KEY, btoa(JSON.stringify({ email, password })))
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
       onLogin(data.token)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao entrar')
@@ -80,6 +99,16 @@ export default function Login({ onLogin, onGoRegister }: Props) {
               onChange={e => setPassword(e.target.value)}
             />
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={e => setRemember(e.target.checked)}
+              className="w-4 h-4 rounded accent-[hsl(142,71%,45%)] cursor-pointer"
+            />
+            <span className="text-sm text-[hsl(215,20%,55%)]">Lembrar credenciais</span>
+          </label>
 
           <button
             type="submit"
