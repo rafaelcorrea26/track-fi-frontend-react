@@ -27,9 +27,10 @@ export default function Transactions() {
   const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
-    api(`/recurring-transactions/generate?month=${month}&year=${year}`, { method: 'POST' })
+    fetchTransactions()
+    api<{ generated: number }>(`/recurring-transactions/generate?month=${month}&year=${year}`, { method: 'POST' })
+      .then(res => { if (res.generated > 0) fetchTransactions() })
       .catch(() => {})
-      .finally(() => fetchTransactions())
   }, [month, year, typeFilter])
 
   async function fetchTransactions() {
