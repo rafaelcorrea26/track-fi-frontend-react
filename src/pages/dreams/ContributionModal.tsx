@@ -25,7 +25,7 @@ export default function ContributionModal({ dream, onContributed, onCancel }: Pr
   }, [])
 
   const remaining = dream.target_amount - dream.current_amount
-  const suggestedAmount = dream.monthly_needed > 0 ? dream.monthly_needed : remaining
+  const suggestedAmount = (dream.monthly_needed ?? 0) > 0 ? (dream.monthly_needed ?? 0) : remaining
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,8 +43,7 @@ export default function ContributionModal({ dream, onContributed, onCancel }: Pr
     try {
       const res = await api<ContribResponse>(
         `/dreams/${dream.id}/contributions`,
-        'POST',
-        { account_id: parseInt(accountID), amount: parsedAmount, contribution_date: date, notes }
+        { method: 'POST', body: { account_id: parseInt(accountID), amount: parsedAmount, contribution_date: date, notes } }
       )
       onContributed(res.dream)
     } catch (err) {

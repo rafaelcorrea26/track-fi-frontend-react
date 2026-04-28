@@ -45,8 +45,8 @@ export default function DreamForm({ dream, onSaved, onCancel }: Props) {
     try {
       const body = { name, description, target_amount: amount, target_date: targetDate, priority, status }
       const saved = isEdit
-        ? await api<Dream>(`/dreams/${dream.id}`, 'PUT', body)
-        : await api<Dream>('/dreams', 'POST', body)
+        ? await api<Dream>(`/dreams/${dream.id}`, { method: 'PUT', body })
+        : await api<Dream>('/dreams', { method: 'POST', body })
       onSaved(saved)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao salvar sonho')

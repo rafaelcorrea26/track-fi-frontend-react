@@ -28,8 +28,8 @@ export default function AccountForm({ account, onSaved, onCancel }: Props) {
     try {
       const body = { name, type, initial_balance: parseFloat(initialBalance) || 0 }
       const saved = isEdit
-        ? await api<Account>(`/accounts/${account.id}`, 'PUT', body)
-        : await api<Account>('/accounts', 'POST', body)
+        ? await api<Account>(`/accounts/${account.id}`, { method: 'PUT', body })
+        : await api<Account>('/accounts', { method: 'POST', body })
       onSaved(saved)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao salvar conta')

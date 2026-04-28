@@ -30,8 +30,8 @@ export default function CategoryForm({ category, defaultType = 'expense', onSave
     try {
       const body = { name, type, icon, color }
       const saved = isEdit
-        ? await api<Category>(`/categories/${category.id}`, 'PUT', body)
-        : await api<Category>('/categories', 'POST', body)
+        ? await api<Category>(`/categories/${category.id}`, { method: 'PUT', body })
+        : await api<Category>('/categories', { method: 'POST', body })
       onSaved(saved)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao salvar categoria')

@@ -73,15 +73,15 @@ export default function DreamCard({ dream: d, onEdit, onDelete, onContribute }: 
       {/* info calculada */}
       {isActive && !isCompleted && (
         <div className="grid grid-cols-2 gap-3">
-          {d.monthly_needed > 0 && (
+          {(d.monthly_needed ?? 0) > 0 && (
             <div className="bg-[hsl(217,20%,14%)] rounded-lg px-3 py-2">
               <p className="text-[hsl(215,20%,45%)] text-xs">Guardar/mês</p>
               <p className="text-[hsl(142,71%,45%)] font-semibold text-sm mt-0.5">
-                {formatCurrency(d.monthly_needed)}
+                {formatCurrency(d.monthly_needed ?? 0)}
               </p>
             </div>
           )}
-          {d.months_left > 0 && (
+          {(d.months_left ?? 0) > 0 && (
             <div className="bg-[hsl(217,20%,14%)] rounded-lg px-3 py-2">
               <p className="text-[hsl(215,20%,45%)] text-xs">Meses restantes</p>
               <p className={`font-semibold text-sm mt-0.5 ${d.on_track ? 'text-[hsl(142,71%,45%)]' : 'text-[hsl(38,92%,50%)]'}`}>

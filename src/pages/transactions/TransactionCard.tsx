@@ -19,7 +19,7 @@ export default function TransactionCard({ transaction: t, onEdit, onDelete }: Pr
       {/* ícone da categoria */}
       <div
         className="w-9 h-9 rounded-full flex items-center justify-center text-base shrink-0"
-        style={{ backgroundColor: t.category_color ? `${t.category_color}20` : 'hsl(217,20%,14%)' }}
+        style={{ backgroundColor: 'hsl(217,20%,14%)' }}
       >
         {t.category_icon || '💸'}
       </div>
