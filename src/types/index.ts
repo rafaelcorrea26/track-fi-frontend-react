@@ -105,6 +105,24 @@ export type Budget = {
   created_at: string
 }
 
+export type RecurringTransaction = {
+  id: number
+  account_id: number
+  account_name?: string
+  category_id?: number
+  category_name?: string
+  category_icon?: string
+  type: 'income' | 'expense'
+  description: string
+  amount: number
+  day_of_month: number
+  start_month: number
+  start_year: number
+  months?: number
+  active: boolean
+  created_at: string
+}
+
 export type BudgetAlert = {
   id: number
   category_name: string

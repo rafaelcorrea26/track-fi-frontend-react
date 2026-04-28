@@ -24,6 +24,13 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
   const [isFixed, setIsFixed] = useState(transaction?.is_fixed ?? false)
   const [isInstallment, setIsInstallment] = useState(false)
   const [totalInstallments, setTotalInstallments] = useState('2')
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurringDay, setRecurringDay] = useState(() => {
+    const d = parseInt(new Date().toISOString().split('T')[0].split('-')[2])
+    return String(d > 28 ? 28 : d)
+  })
+  const [recurringIndefinite, setRecurringIndefinite] = useState(true)
+  const [recurringMonths, setRecurringMonths] = useState('12')
   const [notes, setNotes] = useState(transaction?.notes ?? '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -55,23 +62,37 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
 
     setLoading(true)
     try {
-      const body = {
-        account_id: parseInt(accountID),
-        category_id: categoryID ? parseInt(categoryID) : null,
-        type,
-        description,
-        amount: parsedAmount,
-        transaction_date: date,
-        is_fixed: isFixed,
-        is_installment: isInstallment,
-        total_installments: isInstallment ? parseInt(totalInstallments) : 1,
-        notes,
-      }
-
-      if (isEdit) {
-        await api<Transaction>(`/transactions/${transaction.id}`, { method: 'PUT', body })
+      if (!isEdit && isRecurring) {
+        await api('/recurring-transactions', {
+          method: 'POST',
+          body: {
+            account_id: parseInt(accountID),
+            category_id: categoryID ? parseInt(categoryID) : null,
+            type,
+            description,
+            amount: parsedAmount,
+            day_of_month: parseInt(recurringDay) || 1,
+            months: recurringIndefinite ? null : parseInt(recurringMonths) || null,
+          },
+        })
       } else {
-        await api('/transactions', { method: 'POST', body })
+        const body = {
+          account_id: parseInt(accountID),
+          category_id: categoryID ? parseInt(categoryID) : null,
+          type,
+          description,
+          amount: parsedAmount,
+          transaction_date: date,
+          is_fixed: isFixed,
+          is_installment: isInstallment,
+          total_installments: isInstallment ? parseInt(totalInstallments) : 1,
+          notes,
+        }
+        if (isEdit) {
+          await api<Transaction>(`/transactions/${transaction.id}`, { method: 'PUT', body })
+        } else {
+          await api('/transactions', { method: 'POST', body })
+        }
       }
 
       onSaved()
@@ -184,7 +205,18 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
       {/* checkboxes */}
       {!isEdit && (
         <div className="flex flex-col gap-2">
-          {type === 'expense' && (
+          {(type === 'income' || type === 'expense') && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={e => { setIsRecurring(e.target.checked); setIsInstallment(false); setIsFixed(false) }}
+                className="w-4 h-4 accent-[hsl(142,71%,45%)]"
+              />
+              <span className="text-[hsl(215,20%,55%)] text-sm">Recorrente (gera todo mês automaticamente)</span>
+            </label>
+          )}
+          {type === 'expense' && !isRecurring && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -192,10 +224,10 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
                 onChange={e => setIsFixed(e.target.checked)}
                 className="w-4 h-4 accent-[hsl(142,71%,45%)]"
               />
-              <span className="text-[hsl(215,20%,55%)] text-sm">Gasto fixo (recorrente)</span>
+              <span className="text-[hsl(215,20%,55%)] text-sm">Gasto fixo</span>
             </label>
           )}
-          {type === 'expense' && (
+          {type === 'expense' && !isRecurring && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -206,6 +238,54 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
               <span className="text-[hsl(215,20%,55%)] text-sm">Parcelado</span>
             </label>
           )}
+        </div>
+      )}
+
+      {/* opções de recorrência */}
+      {!isEdit && isRecurring && (
+        <div className="flex flex-col gap-3 bg-[hsl(222,20%,8%)] border border-[hsl(142,71%,45%)]/20 rounded-lg p-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">Dia do mês (1–28)</label>
+            <input
+              type="number"
+              min="1"
+              max="28"
+              value={recurringDay}
+              onChange={e => setRecurringDay(e.target.value)}
+              className="bg-[hsl(217,20%,14%)] border border-[hsl(217,20%,18%)] rounded-lg px-3 py-2 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] w-24 transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">Duração</label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={recurringIndefinite}
+                onChange={() => setRecurringIndefinite(true)}
+                className="accent-[hsl(142,71%,45%)]"
+              />
+              <span className="text-[hsl(210,40%,96%)] text-sm">Todo mês indefinidamente</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={!recurringIndefinite}
+                onChange={() => setRecurringIndefinite(false)}
+                className="accent-[hsl(142,71%,45%)]"
+              />
+              <span className="text-[hsl(210,40%,96%)] text-sm">Por</span>
+              <input
+                type="number"
+                min="1"
+                max="120"
+                value={recurringMonths}
+                onChange={e => setRecurringMonths(e.target.value)}
+                disabled={recurringIndefinite}
+                className="bg-[hsl(217,20%,14%)] border border-[hsl(217,20%,18%)] rounded-lg px-2 py-1 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] w-16 transition-colors disabled:opacity-40"
+              />
+              <span className="text-[hsl(210,40%,96%)] text-sm">meses</span>
+            </label>
+          </div>
         </div>
       )}
 

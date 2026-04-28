@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Plus, RefreshCw } from 'lucide-react'
 import type { Transaction } from '@/types'
 import { api, ApiError } from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
@@ -7,11 +7,13 @@ import type { TransactionType } from './types'
 import TransactionFilters from './TransactionFilters'
 import TransactionCard from './TransactionCard'
 import TransactionForm from './TransactionForm'
+import RecurringList from './RecurringList'
 
 type Modal =
   | { type: 'create' }
   | { type: 'edit'; transaction: Transaction }
   | { type: 'delete'; transaction: Transaction }
+  | { type: 'recurring' }
   | null
 
 export default function Transactions() {
@@ -23,8 +25,18 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<Modal>(null)
   const [deleteError, setDeleteError] = useState('')
+  const generatedRef = useRef(false)
 
-  useEffect(() => { fetchTransactions() }, [month, year, typeFilter])
+  useEffect(() => {
+    if (!generatedRef.current) {
+      generatedRef.current = true
+      api('/recurring-transactions/generate', { method: 'POST' })
+        .catch(() => {})
+        .finally(() => fetchTransactions())
+      return
+    }
+    fetchTransactions()
+  }, [month, year, typeFilter])
 
   async function fetchTransactions() {
     setLoading(true)
@@ -66,13 +78,22 @@ export default function Transactions() {
     <div className="flex flex-col gap-5 max-w-2xl">
       <div className="flex items-center justify-between">
         <h2 className="text-[hsl(210,40%,96%)] text-xl font-semibold">Transações</h2>
-        <button
-          onClick={() => setModal({ type: 'create' })}
-          className="flex items-center gap-2 bg-[hsl(142,71%,45%)] text-[hsl(144,100%,6%)] px-3 py-2 rounded-lg text-sm font-semibold hover:brightness-110 transition-all"
-        >
-          <Plus size={16} />
-          Nova
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModal({ type: 'recurring' })}
+            className="flex items-center gap-1.5 border border-[hsl(217,20%,18%)] text-[hsl(215,20%,55%)] px-3 py-2 rounded-lg text-sm hover:text-[hsl(210,40%,96%)] transition-colors"
+          >
+            <RefreshCw size={14} />
+            Recorrentes
+          </button>
+          <button
+            onClick={() => setModal({ type: 'create' })}
+            className="flex items-center gap-2 bg-[hsl(142,71%,45%)] text-[hsl(144,100%,6%)] px-3 py-2 rounded-lg text-sm font-semibold hover:brightness-110 transition-all"
+          >
+            <Plus size={16} />
+            Nova
+          </button>
+        </div>
       </div>
 
       <TransactionFilters
@@ -135,6 +156,15 @@ export default function Transactions() {
               onSaved={() => { setModal(null); fetchTransactions() }}
               onCancel={() => setModal(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* modal recorrentes */}
+      {modal?.type === 'recurring' && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
+            <RecurringList onClose={() => setModal(null)} />
           </div>
         </div>
       )}
