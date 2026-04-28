@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, RefreshCw } from 'lucide-react'
 import type { Transaction } from '@/types'
 import { api, ApiError } from '@/services/api'
@@ -25,17 +25,11 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<Modal>(null)
   const [deleteError, setDeleteError] = useState('')
-  const generatedRef = useRef(false)
 
   useEffect(() => {
-    if (!generatedRef.current) {
-      generatedRef.current = true
-      api('/recurring-transactions/generate', { method: 'POST' })
-        .catch(() => {})
-        .finally(() => fetchTransactions())
-      return
-    }
-    fetchTransactions()
+    api(`/recurring-transactions/generate?month=${month}&year=${year}`, { method: 'POST' })
+      .catch(() => {})
+      .finally(() => fetchTransactions())
   }, [month, year, typeFilter])
 
   async function fetchTransactions() {
