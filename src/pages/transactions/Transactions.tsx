@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, RefreshCw } from 'lucide-react'
 import type { Transaction } from '@/types'
 import { api, ApiError } from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
+import { useAccounts } from '@/hooks/useAccounts'
+import { useCategories } from '@/hooks/useCategories'
 import type { TransactionType } from './types'
 import TransactionFilters from './TransactionFilters'
 import TransactionCard from './TransactionCard'
@@ -21,39 +24,42 @@ export default function Transactions() {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all')
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<Modal>(null)
   const [deleteError, setDeleteError] = useState('')
 
-  useEffect(() => {
-    fetchTransactions()
-    api<{ generated: number }>(`/recurring-transactions/generate?month=${month}&year=${year}`, { method: 'POST' })
-      .then(res => { if (res.generated > 0) fetchTransactions() })
-      .catch(() => {})
-  }, [month, year, typeFilter])
+  const queryClient = useQueryClient()
+  const { data: accounts = [] } = useAccounts()
+  const { data: categories = [] } = useCategories()
 
-  async function fetchTransactions() {
-    setLoading(true)
-    try {
+  const { data: transactions = [], isPending: loading } = useQuery({
+    queryKey: ['transactions', month, year, typeFilter],
+    queryFn: async () => {
       const params = new URLSearchParams({
         month: String(month),
         year: String(year),
         ...(typeFilter !== 'all' ? { type: typeFilter } : {}),
       })
-      const data = await api<Transaction[]>(`/transactions?${params}`)
-      setTransactions(data ?? [])
-    } finally {
-      setLoading(false)
-    }
-  }
+
+      const [genResult, initialData] = await Promise.all([
+        api<{ generated: number }>(`/recurring-transactions/generate?month=${month}&year=${year}`, { method: 'POST' })
+          .catch(() => ({ generated: 0 })),
+        api<Transaction[]>(`/transactions?${params}`),
+      ])
+
+      if (genResult.generated > 0) {
+        return api<Transaction[]>(`/transactions?${params}`).then(d => d ?? [])
+      }
+      return initialData ?? []
+    },
+    staleTime: 30 * 1000,
+  })
 
   async function handleDelete() {
     if (modal?.type !== 'delete') return
     setDeleteError('')
     try {
       await api(`/transactions/${modal.transaction.id}`, { method: 'DELETE' })
-      setTransactions(prev => prev.filter(t => t.id !== modal.transaction.id))
+      queryClient.invalidateQueries({ queryKey: ['transactions', month, year] })
       setModal(null)
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.message : 'Erro ao remover')
@@ -148,7 +154,9 @@ export default function Transactions() {
             </h3>
             <TransactionForm
               transaction={modal.type === 'edit' ? modal.transaction : undefined}
-              onSaved={() => { setModal(null); fetchTransactions() }}
+              accounts={accounts}
+              categories={categories}
+              onSaved={() => { setModal(null); queryClient.invalidateQueries({ queryKey: ['transactions', month, year] }) }}
               onCancel={() => setModal(null)}
             />
           </div>

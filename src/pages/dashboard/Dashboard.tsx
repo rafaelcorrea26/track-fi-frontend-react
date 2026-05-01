@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import type { DashboardData } from "@/types"
 import { api } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
@@ -7,22 +8,12 @@ export function Dashboard() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const d = await api<DashboardData>(`/dashboard?month=${month}&year=${year}`)
-      setData(d)
-    } catch {
-      /* silent */
-    } finally {
-      setLoading(false)
-    }
-  }, [month, year])
-
-  useEffect(() => { load() }, [load])
+  const { data, isPending: loading } = useQuery({
+    queryKey: ['dashboard', month, year],
+    queryFn: () => api<DashboardData>(`/dashboard?month=${month}&year=${year}`),
+    staleTime: 60 * 1000,
+  })
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear(y => y - 1) }

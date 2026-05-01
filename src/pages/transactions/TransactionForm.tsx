@@ -5,15 +5,15 @@ import { api, ApiError } from '@/services/api'
 
 type Props = {
   transaction?: Transaction
+  accounts: Account[]
+  categories: Category[]
   onSaved: () => void
   onCancel: () => void
 }
 
 const TYPES: TransactionType[] = ['expense', 'income', 'saving', 'transfer']
 
-export default function TransactionForm({ transaction, onSaved, onCancel }: Props) {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+export default function TransactionForm({ transaction, accounts, categories, onSaved, onCancel }: Props) {
 
   const [type, setType] = useState<TransactionType>((transaction?.type as TransactionType) ?? 'expense')
   const [description, setDescription] = useState(transaction?.description ?? '')
@@ -37,11 +37,6 @@ export default function TransactionForm({ transaction, onSaved, onCancel }: Prop
   const [loading, setLoading] = useState(false)
 
   const isEdit = !!transaction
-
-  useEffect(() => {
-    api<Account[]>('/accounts').then(setAccounts).catch(() => {})
-    api<Category[]>('/categories').then(setCategories).catch(() => {})
-  }, [])
 
   useEffect(() => {
     const d = parseInt(date.split('-')[2])

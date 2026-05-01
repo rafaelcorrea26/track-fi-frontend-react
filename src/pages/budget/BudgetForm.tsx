@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react"
-import type { Category } from "@/types"
-import { api } from "@/services/api"
+import { useState } from "react"
+import { useCategories } from "@/hooks/useCategories"
 
 interface Props {
   month: number
@@ -12,13 +11,9 @@ interface Props {
 export function BudgetForm({ month, year, onSubmit, onCancel }: Props) {
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [limit, setLimit] = useState("")
-  const [categories, setCategories] = useState<Category[]>([])
+  const { data: categories } = useCategories('expense')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    api<Category[]>("/categories?type=expense").then(setCategories).catch(() => {})
-  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

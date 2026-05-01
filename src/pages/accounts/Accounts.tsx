@@ -1,37 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import type { Account } from '@/types'
 import { api, ApiError } from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
+import { useAccounts } from '@/hooks/useAccounts'
 import AccountCard from './AccountCard'
 import AccountForm from './AccountForm'
 
 type Modal = { type: 'create' } | { type: 'edit'; account: Account } | { type: 'delete'; account: Account } | null
 
 export default function Accounts() {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: accounts = [], isPending: loading } = useAccounts()
   const [modal, setModal] = useState<Modal>(null)
   const [deleteError, setDeleteError] = useState('')
 
-  useEffect(() => {
-    fetchAccounts()
-  }, [])
-
-  async function fetchAccounts() {
-    try {
-      const data = await api<Account[]>('/accounts')
-      setAccounts(data)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function handleSaved(saved: Account) {
-    setAccounts(prev => {
-      const exists = prev.find(a => a.id === saved.id)
-      return exists ? prev.map(a => a.id === saved.id ? saved : a) : [...prev, saved]
-    })
+  function handleSaved() {
+    queryClient.invalidateQueries({ queryKey: ['accounts'] })
     setModal(null)
   }
 
@@ -40,7 +26,7 @@ export default function Accounts() {
     setDeleteError('')
     try {
       await api(`/accounts/${modal.account.id}`, { method: 'DELETE' })
-      setAccounts(prev => prev.filter(a => a.id !== modal.account.id))
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
       setModal(null)
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.message : 'Erro ao remover conta')

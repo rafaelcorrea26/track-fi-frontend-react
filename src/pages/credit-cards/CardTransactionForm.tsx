@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react"
-import type { Category } from "@/types"
-import { api } from "@/services/api"
+import { useState } from "react"
+import { useCategories } from "@/hooks/useCategories"
 import { formatCurrency } from "@/lib/utils"
 
 interface Props {
@@ -23,13 +22,9 @@ export function CardTransactionForm({ cardId: _cardId, onSubmit, onCancel }: Pro
   const [invoiceMonth, setInvoiceMonth] = useState(new Date().getMonth() + 1)
   const [invoiceYear, setInvoiceYear] = useState(new Date().getFullYear())
   const [installments, setInstallments] = useState(1)
-  const [categories, setCategories] = useState<Category[]>([])
+  const { data: categories } = useCategories('expense')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    api<Category[]>("/categories?type=expense").then(setCategories).catch(() => {})
-  }, [])
 
   const amountNum = parseFloat(amount) || 0
   const perParcel = installments > 1 ? amountNum / installments : amountNum

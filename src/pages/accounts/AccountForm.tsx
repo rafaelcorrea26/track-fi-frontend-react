@@ -5,7 +5,7 @@ import { api, ApiError } from '@/services/api'
 
 type Props = {
   account?: Account
-  onSaved: (account: Account) => void
+  onSaved: () => void
   onCancel: () => void
 }
 
@@ -27,10 +27,12 @@ export default function AccountForm({ account, onSaved, onCancel }: Props) {
 
     try {
       const body = { name, type, initial_balance: parseFloat(initialBalance) || 0 }
-      const saved = isEdit
-        ? await api<Account>(`/accounts/${account.id}`, { method: 'PUT', body })
-        : await api<Account>('/accounts', { method: 'POST', body })
-      onSaved(saved)
+      if (isEdit) {
+        await api<Account>(`/accounts/${account.id}`, { method: 'PUT', body })
+      } else {
+        await api<Account>('/accounts', { method: 'POST', body })
+      }
+      onSaved()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao salvar conta')
     } finally {

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { Budget as BudgetType } from "@/types"
 import { api } from "@/services/api"
 import { BudgetForm } from "./BudgetForm"
@@ -8,34 +9,25 @@ export function Budget() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
-  const [budgets, setBudgets] = useState<BudgetType[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await api<BudgetType[]>(`/budgets?month=${month}&year=${year}`)
-      setBudgets(data)
-    } catch {
-      setBudgets([])
-    } finally {
-      setLoading(false)
-    }
-  }, [month, year])
-
-  useEffect(() => { load() }, [load])
+  const { data: budgets = [], isPending: loading } = useQuery({
+    queryKey: ['budgets', month, year],
+    queryFn: () => api<BudgetType[]>(`/budgets?month=${month}&year=${year}`).then(d => d ?? []),
+    staleTime: 60 * 1000,
+  })
 
   async function handleUpsert(data: { category_id: number; month: number; year: number; limit_amount: number }) {
     await api("/budgets", { method: "POST", body: data })
     setShowForm(false)
-    await load()
+    queryClient.invalidateQueries({ queryKey: ['budgets', month, year] })
   }
 
   async function handleDelete(id: number) {
     if (!confirm("Remover este orçamento?")) return
     await api(`/budgets/${id}`, { method: "DELETE" })
-    await load()
+    queryClient.invalidateQueries({ queryKey: ['budgets', month, year] })
   }
 
   function prevMonth() {
