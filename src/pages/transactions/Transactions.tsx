@@ -167,7 +167,7 @@ export default function Transactions() {
       {modal?.type === 'recurring' && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
-            <RecurringList onClose={() => setModal(null)} />
+            <RecurringList month={month} year={year} onClose={() => setModal(null)} />
           </div>
         </div>
       )}

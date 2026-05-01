@@ -7,7 +7,9 @@ import { formatCurrency } from '@/lib/utils'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 
-type Props = { onClose: () => void }
+const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+type Props = { month: number; year: number; onClose: () => void }
 
 type EditForm = {
   description: string
@@ -36,7 +38,7 @@ function durationLabel(r: RecurringTransaction) {
   return `Por ${r.months} ${r.months === 1 ? 'mês' : 'meses'}`
 }
 
-export default function RecurringList({ onClose }: Props) {
+export default function RecurringList({ month, year, onClose }: Props) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<RecurringTransaction | null>(null)
   const [form, setForm] = useState<EditForm | null>(null)
@@ -63,8 +65,11 @@ export default function RecurringList({ onClose }: Props) {
   const updateMutation = useMutation({
     mutationFn: ({ id, body }: { id: number; body: object }) =>
       api(`/recurring-transactions/${id}`, { method: 'PUT', body }),
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
+      // Invalida transações do mês visualizado pois valores no banco foram alterados
+      queryClient.invalidateQueries({ queryKey: ['transactions', month, year] })
       setEditing(null)
       setForm(null)
     },
@@ -93,6 +98,8 @@ export default function RecurringList({ onClose }: Props) {
         amount,
         day_of_month: parseInt(form.dayOfMonth) || 1,
         months: form.indefinite ? null : parseInt(form.months) || null,
+        from_month: month,
+        from_year: year,
       },
     })
   }
@@ -193,7 +200,9 @@ export default function RecurringList({ onClose }: Props) {
                   className="mt-1 p-4 rounded-lg border border-[hsl(142,71%,45%)]/30 bg-[hsl(222,20%,9%)] flex flex-col gap-3"
                 >
                   <p className="text-[hsl(215,20%,55%)] text-xs font-medium">
-                    Editar recorrente — alterações valem para os próximos meses gerados
+                    Editar recorrente — aplicar a partir de{' '}
+                    <span className="text-[hsl(142,71%,45%)]">{MONTHS[month - 1]}/{year}</span>
+                    {' '}(atualiza transações já geradas e futuras)
                   </p>
 
                   {formError && (
