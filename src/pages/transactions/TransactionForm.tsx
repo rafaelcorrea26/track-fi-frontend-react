@@ -31,7 +31,6 @@ export default function TransactionForm({ transaction, accounts, categories, onS
     const d = parseInt(dateStr.split('-')[2])
     return String(d > 28 ? 28 : d)
   })
-  const [recurringIndefinite, setRecurringIndefinite] = useState(false)
   const [recurringMonths, setRecurringMonths] = useState('24')
   const [notes, setNotes] = useState(transaction?.notes ?? '')
   const [error, setError] = useState('')
@@ -74,7 +73,7 @@ export default function TransactionForm({ transaction, accounts, categories, onS
             description,
             amount: parsedAmount,
             day_of_month: parseInt(recurringDay) || 1,
-            months: recurringIndefinite ? null : parseInt(recurringMonths) || null,
+            months: parseInt(recurringMonths) || 24,
           },
         })
       } else {
@@ -92,7 +91,7 @@ export default function TransactionForm({ transaction, accounts, categories, onS
           ...(isEdit && isRecurring ? {
             make_recurring: true,
             day_of_month: parseInt(recurringDay) || 1,
-            months: recurringIndefinite ? null : parseInt(recurringMonths) || null,
+            months: parseInt(recurringMonths) || 24,
           } : {}),
         }
         if (isEdit) {
@@ -270,38 +269,21 @@ export default function TransactionForm({ transaction, accounts, categories, onS
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">
-              Duração
-              <span className="text-[hsl(215,20%,40%)] ml-1">(padrão: 24 meses)</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={!recurringIndefinite}
-                onChange={() => setRecurringIndefinite(false)}
-                className="accent-[hsl(142,71%,45%)]"
-              />
-              <span className="text-[hsl(210,40%,96%)] text-sm">Por</span>
+            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">Duração (meses)</label>
+            <div className="flex items-center gap-2">
               <input
                 type="number"
                 min="1"
                 max="120"
                 value={recurringMonths}
                 onChange={e => setRecurringMonths(e.target.value)}
-                disabled={recurringIndefinite}
-                className="bg-[hsl(217,20%,14%)] border border-[hsl(217,20%,18%)] rounded-lg px-2 py-1 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] w-16 transition-colors disabled:opacity-40"
+                className="bg-[hsl(217,20%,14%)] border border-[hsl(217,20%,18%)] rounded-lg px-3 py-2 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] w-24 transition-colors"
               />
-              <span className="text-[hsl(210,40%,96%)] text-sm">meses</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={recurringIndefinite}
-                onChange={() => setRecurringIndefinite(true)}
-                className="accent-[hsl(142,71%,45%)]"
-              />
-              <span className="text-[hsl(210,40%,96%)] text-sm">Indefinidamente</span>
-            </label>
+              <span className="text-[hsl(215,20%,45%)] text-xs">meses · máx 120 · padrão 24</span>
+            </div>
+            <p className="text-[hsl(215,20%,40%)] text-xs">
+              Todas as {recurringMonths || 24} instâncias serão criadas agora. Você pode estender depois.
+            </p>
           </div>
         </div>
       )}

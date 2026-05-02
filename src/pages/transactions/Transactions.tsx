@@ -37,23 +37,13 @@ export default function Transactions() {
 
   const { data: transactions = [], isPending: loading } = useQuery({
     queryKey: ['transactions', month, year, typeFilter],
-    queryFn: async () => {
+    queryFn: () => {
       const params = new URLSearchParams({
         month: String(month),
         year: String(year),
         ...(typeFilter !== 'all' ? { type: typeFilter } : {}),
       })
-
-      const [genResult, initialData] = await Promise.all([
-        api<{ generated: number }>(`/recurring-transactions/generate?month=${month}&year=${year}`, { method: 'POST' })
-          .catch(() => ({ generated: 0 })),
-        api<Transaction[]>(`/transactions?${params}`),
-      ])
-
-      if (genResult.generated > 0) {
-        return api<Transaction[]>(`/transactions?${params}`).then(d => d ?? [])
-      }
-      return initialData ?? []
+      return api<Transaction[]>(`/transactions?${params}`).then(d => d ?? [])
     },
     staleTime: 30 * 1000,
   })
