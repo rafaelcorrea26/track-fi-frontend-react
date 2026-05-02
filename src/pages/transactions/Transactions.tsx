@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, RefreshCw } from 'lucide-react'
-import type { Transaction } from '@/types'
+import { Plus, RefreshCw, AlertTriangle } from 'lucide-react'
+import type { Transaction, RecurringTransaction } from '@/types'
 import { api, ApiError } from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -18,10 +18,34 @@ type Modal =
   | { type: 'recurring-scope'; transaction: Transaction }
   | { type: 'delete'; transaction: Transaction }
   | { type: 'delete-recurring-scope'; transaction: Transaction }
-  | { type: 'recurring'; defaultEditId?: number }
+  | { type: 'recurring'; defaultEditId?: number; defaultExtendId?: number }
   | null
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+const DISMISS_KEY = 'recurring-extend-dismissed'
+
+function getDismissed(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(DISMISS_KEY) || '[]')) }
+  catch { return new Set() }
+}
+
+function saveDismissed(keys: Set<string>) {
+  localStorage.setItem(DISMISS_KEY, JSON.stringify([...keys]))
+}
+
+function lastMonthOf(r: RecurringTransaction): { month: number; year: number } | null {
+  if (!r.months) return null
+  let m = r.start_month + r.months - 1
+  let y = r.start_year
+  while (m > 12) { m -= 12; y++ }
+  return { month: m, year: y }
+}
+
+function dismissKey(r: RecurringTransaction): string {
+  const last = lastMonthOf(r)
+  return last ? `${r.id}-${last.year}-${last.month}` : `${r.id}`
+}
 
 export default function Transactions() {
   const now = new Date()
@@ -30,10 +54,30 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all')
   const [modal, setModal] = useState<Modal>(null)
   const [deleteError, setDeleteError] = useState('')
+  const [dismissed, setDismissed] = useState<Set<string>>(getDismissed)
 
   const queryClient = useQueryClient()
   const { data: accounts = [] } = useAccounts()
   const { data: categories = [] } = useCategories()
+
+  const { data: recurringTemplates = [] } = useQuery({
+    queryKey: ['recurring-transactions'],
+    queryFn: () => api<RecurringTransaction[]>('/recurring-transactions').then(d => d ?? []),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const expiringAlerts = recurringTemplates.filter(r => {
+    if (!r.active || !r.months) return false
+    const last = lastMonthOf(r)
+    return last?.month === month && last?.year === year && !dismissed.has(dismissKey(r))
+  })
+
+  function dismissAlert(r: RecurringTransaction) {
+    const next = new Set(dismissed)
+    next.add(dismissKey(r))
+    setDismissed(next)
+    saveDismissed(next)
+  }
 
   const { data: transactions = [], isPending: loading } = useQuery({
     queryKey: ['transactions', month, year, typeFilter],
@@ -108,6 +152,30 @@ export default function Transactions() {
         onMonthChange={(m, y) => { setMonth(m); setYear(y) }}
         onTypeChange={setTypeFilter}
       />
+
+      {/* alertas de recorrentes no último mês */}
+      {expiringAlerts.map(r => (
+        <div key={r.id} className="flex items-center gap-3 bg-[hsl(38,92%,50%)]/10 border border-[hsl(38,92%,50%)]/30 rounded-xl px-4 py-3">
+          <AlertTriangle size={16} className="text-[hsl(38,92%,50%)] shrink-0" />
+          <p className="flex-1 text-[hsl(38,92%,50%)] text-sm">
+            <strong>{r.description}</strong> chega ao fim em {MONTHS[month - 1]}/{year}. Deseja estender?
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setModal({ type: 'recurring', defaultExtendId: r.id })}
+              className="px-3 py-1 rounded-lg bg-[hsl(38,92%,50%)] text-[hsl(30,100%,6%)] text-xs font-semibold hover:brightness-110 transition-all"
+            >
+              Estender
+            </button>
+            <button
+              onClick={() => dismissAlert(r)}
+              className="px-3 py-1 rounded-lg border border-[hsl(38,92%,50%)]/40 text-[hsl(38,92%,50%)] text-xs hover:bg-[hsl(38,92%,50%)]/10 transition-colors"
+            >
+              Não
+            </button>
+          </div>
+        </div>
+      ))}
 
       {/* resumo do mês */}
       <div className="grid grid-cols-3 gap-3">
@@ -211,7 +279,7 @@ export default function Transactions() {
       {modal?.type === 'recurring' && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
-            <RecurringList month={month} year={year} defaultEditId={modal.defaultEditId} onClose={() => setModal(null)} />
+            <RecurringList month={month} year={year} defaultEditId={modal.defaultEditId} defaultExtendId={modal.defaultExtendId} onClose={() => setModal(null)} />
           </div>
         </div>
       )}
