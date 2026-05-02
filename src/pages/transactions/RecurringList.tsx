@@ -68,8 +68,8 @@ export default function RecurringList({ month, year, onClose }: Props) {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
-      // Invalida todas as queries de transações — a edição afeta qualquer mês já em cache
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      // refetchType:'all' garante que meses em cache mas fora de foco também sejam invalidados
+      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'all' })
       setEditing(null)
       setForm(null)
     },
