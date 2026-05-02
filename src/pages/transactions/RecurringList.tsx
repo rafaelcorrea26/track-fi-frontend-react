@@ -68,8 +68,8 @@ export default function RecurringList({ month, year, onClose }: Props) {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
-      // Invalida transações do mês visualizado pois valores no banco foram alterados
-      queryClient.invalidateQueries({ queryKey: ['transactions', month, year] })
+      // Invalida todas as queries de transações — a edição afeta qualquer mês já em cache
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
       setEditing(null)
       setForm(null)
     },
