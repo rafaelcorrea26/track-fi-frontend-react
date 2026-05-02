@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import type { RecurringTransaction } from '@/types'
@@ -9,7 +9,7 @@ import { useCategories } from '@/hooks/useCategories'
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
-type Props = { month: number; year: number; onClose: () => void }
+type Props = { month: number; year: number; onClose: () => void; defaultEditId?: number }
 
 type EditForm = {
   description: string
@@ -38,11 +38,12 @@ function durationLabel(r: RecurringTransaction) {
   return `Por ${r.months} ${r.months === 1 ? 'mês' : 'meses'}`
 }
 
-export default function RecurringList({ month, year, onClose }: Props) {
+export default function RecurringList({ month, year, onClose, defaultEditId }: Props) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<RecurringTransaction | null>(null)
   const [form, setForm] = useState<EditForm | null>(null)
   const [formError, setFormError] = useState('')
+  const autoStarted = useRef(false)
 
   const { data: accounts = [] } = useAccounts()
   const { data: allCategories = [] } = useCategories()
@@ -51,6 +52,16 @@ export default function RecurringList({ month, year, onClose }: Props) {
     queryKey: ['recurring-transactions'],
     queryFn: () => api<RecurringTransaction[]>('/recurring-transactions').then(d => d ?? []),
   })
+
+  useEffect(() => {
+    if (defaultEditId && items.length > 0 && !autoStarted.current) {
+      const target = items.find(r => r.id === defaultEditId)
+      if (target) {
+        autoStarted.current = true
+        startEdit(target)
+      }
+    }
+  }, [defaultEditId, items])
 
   const toggleMutation = useMutation({
     mutationFn: (id: number) => api(`/recurring-transactions/${id}/toggle`, { method: 'PUT' }),

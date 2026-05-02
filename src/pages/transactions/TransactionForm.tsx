@@ -31,8 +31,8 @@ export default function TransactionForm({ transaction, accounts, categories, onS
     const d = parseInt(dateStr.split('-')[2])
     return String(d > 28 ? 28 : d)
   })
-  const [recurringIndefinite, setRecurringIndefinite] = useState(true)
-  const [recurringMonths, setRecurringMonths] = useState('12')
+  const [recurringIndefinite, setRecurringIndefinite] = useState(false)
+  const [recurringMonths, setRecurringMonths] = useState('24')
   const [notes, setNotes] = useState(transaction?.notes ?? '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -270,15 +270,9 @@ export default function TransactionForm({ transaction, accounts, categories, onS
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">Duração</label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={recurringIndefinite}
-                onChange={() => setRecurringIndefinite(true)}
-                className="accent-[hsl(142,71%,45%)]"
-              />
-              <span className="text-[hsl(210,40%,96%)] text-sm">Todo mês indefinidamente</span>
+            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">
+              Duração
+              <span className="text-[hsl(215,20%,40%)] ml-1">(padrão: 24 meses)</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -298,6 +292,15 @@ export default function TransactionForm({ transaction, accounts, categories, onS
                 className="bg-[hsl(217,20%,14%)] border border-[hsl(217,20%,18%)] rounded-lg px-2 py-1 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] w-16 transition-colors disabled:opacity-40"
               />
               <span className="text-[hsl(210,40%,96%)] text-sm">meses</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={recurringIndefinite}
+                onChange={() => setRecurringIndefinite(true)}
+                className="accent-[hsl(142,71%,45%)]"
+              />
+              <span className="text-[hsl(210,40%,96%)] text-sm">Indefinidamente</span>
             </label>
           </div>
         </div>

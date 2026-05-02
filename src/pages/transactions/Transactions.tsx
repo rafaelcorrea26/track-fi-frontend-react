@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, RefreshCw } from 'lucide-react'
 import type { Transaction } from '@/types'
 import { api, ApiError } from '@/services/api'
@@ -15,9 +15,13 @@ import RecurringList from './RecurringList'
 type Modal =
   | { type: 'create' }
   | { type: 'edit'; transaction: Transaction }
+  | { type: 'recurring-scope'; transaction: Transaction }
   | { type: 'delete'; transaction: Transaction }
-  | { type: 'recurring' }
+  | { type: 'delete-recurring-scope'; transaction: Transaction }
+  | { type: 'recurring'; defaultEditId?: number }
   | null
+
+const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 export default function Transactions() {
   const now = new Date()
@@ -65,6 +69,16 @@ export default function Transactions() {
       setDeleteError(err instanceof ApiError ? err.message : 'Erro ao remover')
     }
   }
+
+  const deleteRecurringFromMutation = useMutation({
+    mutationFn: ({ recurringId }: { recurringId: number }) =>
+      api(`/recurring-transactions/${recurringId}/from?month=${month}&year=${year}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
+      setModal(null)
+    },
+  })
 
   // totais do mês
   const totalIncome = transactions
@@ -138,8 +152,14 @@ export default function Transactions() {
             <TransactionCard
               key={t.id}
               transaction={t}
-              onEdit={tx => setModal({ type: 'edit', transaction: tx })}
-              onDelete={tx => setModal({ type: 'delete', transaction: tx })}
+              onEdit={tx => tx.recurring_id
+                ? setModal({ type: 'recurring-scope', transaction: tx })
+                : setModal({ type: 'edit', transaction: tx })
+              }
+              onDelete={tx => tx.recurring_id
+                ? setModal({ type: 'delete-recurring-scope', transaction: tx })
+                : setModal({ type: 'delete', transaction: tx })
+              }
             />
           ))}
         </div>
@@ -163,11 +183,82 @@ export default function Transactions() {
         </div>
       )}
 
+      {/* modal escolha edição recorrente */}
+      {modal?.type === 'recurring-scope' && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-6 w-full max-w-sm">
+            <h3 className="text-[hsl(210,40%,96%)] font-semibold mb-1">Editar recorrente</h3>
+            <p className="text-[hsl(215,20%,55%)] text-sm mb-5">
+              <strong className="text-[hsl(210,40%,96%)]">{modal.transaction.description}</strong> é recorrente. O que deseja editar?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setModal({ type: 'edit', transaction: modal.transaction })}
+                className="w-full py-3 rounded-lg border border-[hsl(217,20%,18%)] text-left px-4 hover:bg-[hsl(217,20%,14%)] transition-colors"
+              >
+                <span className="text-[hsl(210,40%,96%)] text-sm font-medium block">Só esta ocorrência</span>
+                <span className="text-[hsl(215,20%,45%)] text-xs">Altera apenas {MONTHS[month - 1]}/{year}</span>
+              </button>
+              <button
+                onClick={() => setModal({ type: 'recurring', defaultEditId: modal.transaction.recurring_id ?? undefined })}
+                className="w-full py-3 rounded-lg border border-[hsl(142,71%,45%)]/30 bg-[hsl(142,71%,45%)]/10 text-left px-4 hover:bg-[hsl(142,71%,45%)]/20 transition-colors"
+              >
+                <span className="text-[hsl(142,71%,45%)] text-sm font-medium block">Todas a partir de {MONTHS[month - 1]}/{year}</span>
+                <span className="text-[hsl(142,71%,45%)] text-xs opacity-70">Atualiza o template e os meses já gerados</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setModal(null)}
+              className="mt-3 w-full py-2 text-[hsl(215,20%,45%)] text-sm hover:text-[hsl(210,40%,96%)] transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* modal recorrentes */}
       {modal?.type === 'recurring' && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
-            <RecurringList month={month} year={year} onClose={() => setModal(null)} />
+            <RecurringList month={month} year={year} defaultEditId={modal.defaultEditId} onClose={() => setModal(null)} />
+          </div>
+        </div>
+      )}
+
+      {/* modal escopo de exclusão recorrente */}
+      {modal?.type === 'delete-recurring-scope' && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-6 w-full max-w-sm">
+            <h3 className="text-[hsl(210,40%,96%)] font-semibold mb-1">Remover recorrente</h3>
+            <p className="text-[hsl(215,20%,55%)] text-sm mb-5">
+              <strong className="text-[hsl(210,40%,96%)]">{modal.transaction.description}</strong> é recorrente. O que deseja remover?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setModal({ type: 'delete', transaction: modal.transaction })}
+                className="w-full py-3 rounded-lg border border-[hsl(217,20%,18%)] text-left px-4 hover:bg-[hsl(217,20%,14%)] transition-colors"
+              >
+                <span className="text-[hsl(210,40%,96%)] text-sm font-medium block">Só esta ocorrência</span>
+                <span className="text-[hsl(215,20%,45%)] text-xs">Remove apenas {MONTHS[month - 1]}/{year}</span>
+              </button>
+              <button
+                onClick={() => modal.transaction.recurring_id && deleteRecurringFromMutation.mutate({ recurringId: modal.transaction.recurring_id })}
+                disabled={deleteRecurringFromMutation.isPending}
+                className="w-full py-3 rounded-lg border border-[hsl(0,84%,60%)]/30 bg-[hsl(0,84%,60%)]/10 text-left px-4 hover:bg-[hsl(0,84%,60%)]/20 transition-colors disabled:opacity-50"
+              >
+                <span className="text-[hsl(0,84%,60%)] text-sm font-medium block">
+                  {deleteRecurringFromMutation.isPending ? 'Removendo...' : `Todas a partir de ${MONTHS[month - 1]}/${year}`}
+                </span>
+                <span className="text-[hsl(0,84%,60%)] text-xs opacity-70">Remove as instâncias e pausa o template</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setModal(null)}
+              className="mt-3 w-full py-2 text-[hsl(215,20%,45%)] text-sm hover:text-[hsl(210,40%,96%)] transition-colors"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}
