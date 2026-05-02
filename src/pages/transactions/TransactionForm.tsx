@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import type { Account, Category, Transaction } from '@/types'
 import { TX_TYPE_LABELS, type TransactionType } from './types'
 import { api, ApiError } from '@/services/api'
@@ -222,7 +223,13 @@ export default function TransactionForm({ transaction, accounts, categories, onS
           </label>
         )}
         {transaction?.recurring_id && (
-          <p className="text-xs text-[hsl(142,71%,45%)]">Transação recorrente — gerada automaticamente</p>
+          <div className="flex items-center gap-2 bg-[hsl(142,71%,45%)]/10 border border-[hsl(142,71%,45%)]/30 rounded-lg px-3 py-2">
+            <RefreshCw size={13} className="text-[hsl(142,71%,45%)] shrink-0" />
+            <p className="text-xs text-[hsl(142,71%,45%)]">
+              Transação recorrente — editar aqui altera só esta ocorrência.
+              Para mudar todas, use <strong>Recorrentes</strong> no topo da tela.
+            </p>
+          </div>
         )}
         {type === 'expense' && !isRecurring && !isEdit && (
           <label className="flex items-center gap-2 cursor-pointer">

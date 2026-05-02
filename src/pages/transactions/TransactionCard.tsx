@@ -40,6 +40,9 @@ export default function TransactionCard({ transaction: t, onEdit, onDelete }: Pr
           {t.is_fixed && (
             <span className="text-xs text-[hsl(38,92%,50%)]">· fixo</span>
           )}
+          {t.recurring_id && (
+            <span className="text-xs text-[hsl(142,71%,45%)]">· recorrente</span>
+          )}
         </div>
       </div>
 
