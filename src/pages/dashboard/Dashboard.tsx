@@ -5,9 +5,11 @@ import { api } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
 
 export function Dashboard() {
-  const now = new Date()
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [year, setYear] = useState(now.getFullYear())
+  const [period, setPeriod] = useState(() => {
+    const now = new Date()
+    return { month: now.getMonth() + 1, year: now.getFullYear() }
+  })
+  const { month, year } = period
 
   const { data, isPending: loading } = useQuery({
     queryKey: ['dashboard', month, year],
@@ -16,13 +18,11 @@ export function Dashboard() {
   })
 
   function prevMonth() {
-    if (month === 1) { setMonth(12); setYear(y => y - 1) }
-    else setMonth(m => m - 1)
+    setPeriod(p => p.month === 1 ? { month: 12, year: p.year - 1 } : { ...p, month: p.month - 1 })
   }
 
   function nextMonth() {
-    if (month === 12) { setMonth(1); setYear(y => y + 1) }
-    else setMonth(m => m + 1)
+    setPeriod(p => p.month === 12 ? { month: 1, year: p.year + 1 } : { ...p, month: p.month + 1 })
   }
 
   const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",

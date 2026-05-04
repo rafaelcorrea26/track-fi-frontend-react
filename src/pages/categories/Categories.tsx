@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import type { Category } from '@/types'
 import { api, ApiError } from '@/services/api'
@@ -7,6 +8,7 @@ import CategoryForm from './CategoryForm'
 type Modal = { type: 'create'; defaultType: 'income' | 'expense' } | { type: 'edit'; category: Category } | { type: 'delete'; category: Category } | null
 
 export default function Categories() {
+  const queryClient = useQueryClient()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<Modal>(null)
@@ -28,6 +30,7 @@ export default function Categories() {
       const exists = prev.find(c => c.id === saved.id)
       return exists ? prev.map(c => c.id === saved.id ? saved : c) : [...prev, saved]
     })
+    queryClient.invalidateQueries({ queryKey: ['categories'] })
     setModal(null)
   }
 
@@ -37,6 +40,7 @@ export default function Categories() {
     try {
       await api(`/categories/${modal.category.id}`, { method: 'DELETE' })
       setCategories(prev => prev.filter(c => c.id !== modal.category.id))
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
       setModal(null)
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.message : 'Erro ao remover')

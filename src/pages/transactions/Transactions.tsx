@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, RefreshCw, AlertTriangle } from 'lucide-react'
-import type { Transaction, RecurringTransaction } from '@/types'
+import { Plus, RefreshCw, AlertTriangle, CreditCard } from 'lucide-react'
+import type { Transaction, RecurringTransaction, CardInvoice } from '@/types'
 import { api, ApiError } from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -47,10 +47,16 @@ function dismissKey(r: RecurringTransaction): string {
   return last ? `${r.id}-${last.year}-${last.month}` : `${r.id}`
 }
 
-export default function Transactions() {
-  const now = new Date()
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [year, setYear] = useState(now.getFullYear())
+type Props = {
+  onViewCard?: (cardId: number) => void
+}
+
+export default function Transactions({ onViewCard }: Props) {
+  const [period, setPeriod] = useState(() => {
+    const now = new Date()
+    return { month: now.getMonth() + 1, year: now.getFullYear() }
+  })
+  const { month, year } = period
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all')
   const [modal, setModal] = useState<Modal>(null)
   const [deleteError, setDeleteError] = useState('')
@@ -92,6 +98,13 @@ export default function Transactions() {
     staleTime: 30 * 1000,
   })
 
+  const { data: invoices = [] } = useQuery({
+    queryKey: ['card-invoices', month, year],
+    queryFn: () => api<CardInvoice[]>(`/credit-cards/invoices?month=${month}&year=${year}`).then(d => d ?? []),
+    staleTime: 30 * 1000,
+    enabled: typeFilter === 'all' || typeFilter === 'expense',
+  })
+
   async function handleDelete() {
     if (modal?.type !== 'delete') return
     setDeleteError('')
@@ -121,7 +134,8 @@ export default function Transactions() {
   const totalExpense = transactions
     .filter(t => t.type === 'expense' || t.type === 'saving')
     .reduce((s, t) => s + t.amount, 0)
-  const balance = totalIncome - totalExpense
+  const totalInvoices = invoices.reduce((s, inv) => s + inv.total, 0)
+  const balance = totalIncome - totalExpense - totalInvoices
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
@@ -149,7 +163,7 @@ export default function Transactions() {
         month={month}
         year={year}
         typeFilter={typeFilter}
-        onMonthChange={(m, y) => { setMonth(m); setYear(y) }}
+        onMonthChange={(m, y) => setPeriod({ month: m, year: y })}
         onTypeChange={setTypeFilter}
       />
 
@@ -181,7 +195,7 @@ export default function Transactions() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Receitas', value: totalIncome, color: 'text-[hsl(142,71%,45%)]' },
-          { label: 'Despesas', value: totalExpense, color: 'text-[hsl(0,84%,60%)]' },
+          { label: 'Despesas', value: totalExpense + totalInvoices, color: 'text-[hsl(0,84%,60%)]' },
           { label: 'Saldo', value: balance, color: balance >= 0 ? 'text-[hsl(142,71%,45%)]' : 'text-[hsl(0,84%,60%)]' },
         ].map(item => (
           <div key={item.label} className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-3 text-center">
@@ -194,7 +208,7 @@ export default function Transactions() {
       {/* lista */}
       {loading ? (
         <p className="text-[hsl(215,20%,55%)] text-sm">Carregando...</p>
-      ) : transactions.length === 0 ? (
+      ) : transactions.length === 0 && invoices.length === 0 ? (
         <div className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl p-8 text-center">
           <p className="text-[hsl(215,20%,55%)] text-sm">Nenhuma transação neste período.</p>
           <button
@@ -219,6 +233,26 @@ export default function Transactions() {
                 : setModal({ type: 'delete', transaction: tx })
               }
             />
+          ))}
+          {invoices.map(inv => (
+            <button
+              key={`inv-${inv.card_id}`}
+              onClick={() => onViewCard?.(inv.card_id)}
+              className="bg-[hsl(222,20%,11%)] border border-[hsl(217,20%,18%)] rounded-xl px-4 py-3 flex items-center gap-3 hover:border-[hsl(217,20%,28%)] transition-colors text-left w-full"
+            >
+              <div className="w-8 h-8 rounded-full bg-[hsl(217,20%,18%)] flex items-center justify-center shrink-0">
+                <CreditCard size={15} className="text-[hsl(215,20%,55%)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[hsl(210,40%,96%)] text-sm font-medium truncate">
+                  Fatura {inv.card_name}
+                </p>
+                <p className="text-[hsl(215,20%,45%)] text-xs">Cartão de crédito · ver detalhes →</p>
+              </div>
+              <span className="text-[hsl(0,84%,60%)] font-semibold text-sm shrink-0">
+                -{formatCurrency(inv.total)}
+              </span>
+            </button>
           ))}
         </div>
       )}

@@ -50,15 +50,22 @@ const moreItems: Tab[] = ['categories', 'credit-cards', 'budget', 'reports', 'su
 export default function AppShell({ onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [showMore, setShowMore] = useState(false)
+  const [focusedCardId, setFocusedCardId] = useState<number | undefined>(undefined)
+
+  function handleViewCard(cardId: number) {
+    setFocusedCardId(cardId)
+    setActiveTab('credit-cards')
+    setShowMore(false)
+  }
 
   function renderPage() {
     switch (activeTab) {
       case 'dashboard':    return <Dashboard />
       case 'accounts':     return <Accounts />
       case 'categories':   return <Categories />
-      case 'transactions': return <Transactions />
+      case 'transactions': return <Transactions onViewCard={handleViewCard} />
       case 'dreams':       return <Dreams />
-      case 'credit-cards': return <CreditCards />
+      case 'credit-cards': return <CreditCards focusedCardId={focusedCardId} onFocusCleared={() => setFocusedCardId(undefined)} />
       case 'budget':       return <Budget />
       case 'reports':      return <Reports />
       case 'suggestions':  return <Suggestions />
@@ -113,13 +120,36 @@ export default function AppShell({ onLogout }: Props) {
           <button onClick={onLogout} className="text-xs text-[hsl(215,20%,55%)]">Sair</button>
         </header>
 
-        {/* Página ativa */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        {/* Página ativa — pb-16 reserva espaço para o nav fixo */}
+        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:p-6 lg:pb-6">
           {renderPage()}
         </main>
 
-        {/* Bottom nav mobile */}
-        <nav className="lg:hidden border-t border-[hsl(217,20%,18%)] bg-[hsl(222,20%,11%)]">
+        {/* Bottom nav mobile — fixo no rodapé */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[hsl(222,20%,11%)] border-t border-[hsl(217,20%,18%)]">
+          {/* Submenu "mais" — abre para cima, acima do nav */}
+          {showMore && (
+            <div className="absolute bottom-full left-0 right-0 grid grid-cols-3 gap-2 p-3 bg-[hsl(222,20%,11%)] border-t border-[hsl(217,20%,18%)]">
+              {moreItems.map(id => {
+                const item = navItems.find(n => n.id === id)!
+                return (
+                  <button
+                    key={id}
+                    onClick={() => selectTab(id)}
+                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs transition-colors ${
+                      activeTab === id
+                        ? 'bg-[hsl(142,71%,45%)] text-[hsl(144,100%,6%)]'
+                        : 'text-[hsl(215,20%,55%)] hover:bg-[hsl(217,20%,14%)]'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           <div className="flex">
             {mobileNav.map((id) => {
               const item = navItems.find(n => n.id === id) ?? {
@@ -143,29 +173,6 @@ export default function AppShell({ onLogout }: Props) {
               )
             })}
           </div>
-
-          {/* Submenu "mais" */}
-          {showMore && (
-            <div className="grid grid-cols-3 gap-2 p-3 border-t border-[hsl(217,20%,18%)]">
-              {moreItems.map(id => {
-                const item = navItems.find(n => n.id === id)!
-                return (
-                  <button
-                    key={id}
-                    onClick={() => selectTab(id)}
-                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs transition-colors ${
-                      activeTab === id
-                        ? 'bg-[hsl(142,71%,45%)] text-[hsl(144,100%,6%)]'
-                        : 'text-[hsl(215,20%,55%)] hover:bg-[hsl(217,20%,14%)]'
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
         </nav>
       </div>
     </div>

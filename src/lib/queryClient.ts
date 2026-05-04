@@ -1,11 +1,14 @@
 import { QueryClient } from '@tanstack/react-query'
+import { ApiError } from '@/services/api'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      // Desabilita refetch automático ao focar a aba — em app financeiro é
-      // melhor o dado atualizar só quando o usuário navega ou muta explicitamente.
+      retry: (failureCount, error) => {
+        // 401 é tratado globalmente (sessão expirada) — não adianta repetir
+        if (error instanceof ApiError && error.status === 401) return false
+        return failureCount < 1
+      },
       refetchOnWindowFocus: false,
     },
   },

@@ -65,6 +65,12 @@ export type CardTransaction = {
   created_at: string
 }
 
+export type CardInvoice = {
+  card_id: number
+  card_name: string
+  total: number
+}
+
 export type Dream = {
   id: number
   name: string

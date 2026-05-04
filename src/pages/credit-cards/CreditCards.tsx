@@ -5,7 +5,12 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { CardForm } from "./CardForm"
 import { CardTransactionForm } from "./CardTransactionForm"
 
-export function CreditCards() {
+type Props = {
+  focusedCardId?: number
+  onFocusCleared?: () => void
+}
+
+export function CreditCards({ focusedCardId, onFocusCleared }: Props) {
   const [cards, setCards] = useState<CreditCard[]>([])
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null)
   const [transactions, setTransactions] = useState<CardTransaction[]>([])
@@ -43,6 +48,15 @@ export function CreditCards() {
 
   useEffect(() => { loadCards() }, [])
   useEffect(() => { loadTransactions() }, [loadTransactions])
+
+  useEffect(() => {
+    if (!focusedCardId || cards.length === 0) return
+    const card = cards.find(c => c.id === focusedCardId)
+    if (card) {
+      setSelectedCard(card)
+      onFocusCleared?.()
+    }
+  }, [focusedCardId, cards]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCreateCard(data: Omit<CreditCard, "id" | "user_id" | "used_amount" | "available_amount" | "created_at">) {
     await api("/credit-cards", { method: "POST", body: data })

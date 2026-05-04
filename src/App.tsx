@@ -10,8 +10,9 @@ export default function App() {
   const [authPage, setAuthPage] = useState<AuthPage>('login')
 
   useEffect(() => {
-    const stored = localStorage.getItem('token')
-    setToken(stored)
+    function onSessionExpired() { setToken(null) }
+    window.addEventListener('trackfi:session-expired', onSessionExpired)
+    return () => window.removeEventListener('trackfi:session-expired', onSessionExpired)
   }, [])
 
   function handleLogin(t: string) {

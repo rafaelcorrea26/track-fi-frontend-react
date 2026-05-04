@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import type { Account, Category, Transaction } from '@/types'
 import { TX_TYPE_LABELS, type TransactionType } from './types'
@@ -19,7 +19,11 @@ export default function TransactionForm({ transaction, accounts, categories, onS
   const [type, setType] = useState<TransactionType>((transaction?.type as TransactionType) ?? 'expense')
   const [description, setDescription] = useState(transaction?.description ?? '')
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '')
-  const [accountID, setAccountID] = useState(transaction?.account_id ? String(transaction.account_id) : '')
+  const [accountID, setAccountID] = useState(() => {
+    if (transaction?.account_id) return String(transaction.account_id)
+    if (accounts.length === 1) return String(accounts[0].id)
+    return ''
+  })
   const [categoryID, setCategoryID] = useState(transaction?.category_id ? String(transaction.category_id) : '')
   const [date, setDate] = useState(transaction?.transaction_date ?? new Date().toISOString().split('T')[0])
   const [isFixed, setIsFixed] = useState(transaction?.is_fixed ?? false)
@@ -35,8 +39,13 @@ export default function TransactionForm({ transaction, accounts, categories, onS
   const [notes, setNotes] = useState(transaction?.notes ?? '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const accountSelectRef = useRef<HTMLSelectElement>(null)
 
   const isEdit = !!transaction
+
+  useEffect(() => {
+    if (!accountID && accounts.length === 1) setAccountID(String(accounts[0].id))
+  }, [accounts.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const d = parseInt(date.split('-')[2])
@@ -57,7 +66,8 @@ export default function TransactionForm({ transaction, accounts, categories, onS
       return
     }
     if (!accountID) {
-      setError('Selecione uma conta')
+      accountSelectRef.current?.focus()
+      accountSelectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
 
@@ -178,11 +188,17 @@ export default function TransactionForm({ transaction, accounts, categories, onS
 
       {/* conta */}
       <div className="flex flex-col gap-1">
-        <label className="text-[hsl(215,20%,55%)] text-xs font-medium">Conta</label>
+        <label className="text-[hsl(215,20%,55%)] text-xs font-medium">
+          Conta
+          {!accountID && <span className="text-[hsl(38,92%,50%)] ml-1 text-xs">← obrigatório</span>}
+        </label>
         <select
+          ref={accountSelectRef}
           value={accountID}
           onChange={e => setAccountID(e.target.value)}
-          className="bg-[hsl(217,20%,14%)] border border-[hsl(217,20%,18%)] rounded-lg px-3 py-2 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] transition-colors"
+          className={`bg-[hsl(217,20%,14%)] border rounded-lg px-3 py-2 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] transition-colors ${
+            !accountID ? 'border-[hsl(38,92%,50%)]/60' : 'border-[hsl(217,20%,18%)]'
+          }`}
         >
           <option value="">Selecione uma conta</option>
           {accounts.map(a => (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Account, Dream } from '@/types'
 import { api, ApiError } from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
@@ -19,9 +19,13 @@ export default function ContributionModal({ dream, onContributed, onCancel }: Pr
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const accountSelectRef = useRef<HTMLSelectElement>(null)
 
   useEffect(() => {
-    api<Account[]>('/accounts').then(setAccounts).catch(() => {})
+    api<Account[]>('/accounts').then(data => {
+      setAccounts(data ?? [])
+      if (data?.length === 1) setAccountID(String(data[0].id))
+    }).catch(() => {})
   }, [])
 
   const remaining = dream.target_amount - dream.current_amount
@@ -36,7 +40,8 @@ export default function ContributionModal({ dream, onContributed, onCancel }: Pr
       return
     }
     if (!accountID) {
-      setError('Selecione uma conta')
+      accountSelectRef.current?.focus()
+      accountSelectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     setLoading(true)
@@ -92,11 +97,17 @@ export default function ContributionModal({ dream, onContributed, onCancel }: Pr
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">Descontar de</label>
+            <label className="text-[hsl(215,20%,55%)] text-xs font-medium">
+              Descontar de
+              {!accountID && <span className="text-[hsl(38,92%,50%)] ml-1 text-xs">← obrigatório</span>}
+            </label>
             <select
+              ref={accountSelectRef}
               value={accountID}
               onChange={e => setAccountID(e.target.value)}
-              className="bg-[hsl(217,20%,14%)] border border-[hsl(217,20%,18%)] rounded-lg px-3 py-2 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] transition-colors"
+              className={`bg-[hsl(217,20%,14%)] border rounded-lg px-3 py-2 text-[hsl(210,40%,96%)] text-sm outline-none focus:border-[hsl(142,71%,45%)] transition-colors ${
+                !accountID ? 'border-[hsl(38,92%,50%)]/60' : 'border-[hsl(217,20%,18%)]'
+              }`}
             >
               <option value="">Selecione uma conta</option>
               {accounts.map(a => (

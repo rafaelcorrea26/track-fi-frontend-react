@@ -31,6 +31,10 @@ export async function api<T, B = unknown>(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'erro desconhecido' }))
+    if (res.status === 401) {
+      localStorage.removeItem('token')
+      window.dispatchEvent(new Event('trackfi:session-expired'))
+    }
     throw new ApiError(res.status, data.error ?? 'erro na requisição')
   }
 
